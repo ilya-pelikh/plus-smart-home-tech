@@ -2,7 +2,6 @@ package ru.yandex.practicum.collector.models.sensors;
 
 import java.time.Instant;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -27,7 +26,7 @@ public abstract class SensorEvent {
     private String id;
     @NotBlank
     private String hubId;
-    @NotNull
+
     private Instant timestamp = Instant.now();
 
     // абстрактный метод, который должен быть определён в конкретных реализациях

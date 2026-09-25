@@ -35,9 +35,13 @@ public class EventMapper {
     }
 
     private ScenarioConditionAvro toAvro(ScenarioCondition condition) {
+        Object value = switch (condition.getType()) {
+            case MOTION, SWITCH -> condition.getValue() != 0;
+            case LUMINOSITY, TEMPERATURE, CO2LEVEL, HUMIDITY -> condition.getValue();
+        };
         return new ScenarioConditionAvro(condition.getSensorId(),
                 ConditionTypeAvro.valueOf(condition.getType().name()),
-                ConditionOperationAvro.valueOf(condition.getOperation().name()), condition.getValue());
+                ConditionOperationAvro.valueOf(condition.getOperation().name()), value);
     }
 
     private DeviceActionAvro toAvro(DeviceAction action) {
