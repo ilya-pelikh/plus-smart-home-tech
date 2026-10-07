@@ -1,44 +1,45 @@
 package ru.yandex.practicum.collector.controller;
 
+import com.google.protobuf.Empty;
+import io.grpc.Status;
+import io.grpc.StatusRuntimeException;
+import io.grpc.stub.StreamObserver;
 import lombok.RequiredArgsConstructor;
-import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
-import ru.yandex.practicum.collector.models.hub.HubEvent;
-import ru.yandex.practicum.collector.models.sensors.SensorEvent;
+import net.devh.boot.grpc.server.service.GrpcService;
 import ru.yandex.practicum.collector.services.CollectorService;
-
-import org.springframework.http.MediaType;
-import org.springframework.web.server.ResponseStatusException;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import ru.yandex.practicum.grpc.telemetry.collector.CollectorControllerGrpc;
+import ru.yandex.practicum.grpc.telemetry.event.HubEventProto;
+import ru.yandex.practicum.grpc.telemetry.event.SensorEventProto;
 
 @Slf4j
-@RestController
+@GrpcService
 @RequiredArgsConstructor
-@RequestMapping("/events")
-public class CollectorController {
-
+public class CollectorController extends CollectorControllerGrpc.CollectorControllerImplBase {
     private final CollectorService collectorService;
 
-    @PostMapping(value = "/sensors", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public void collectSensorEvent(@Valid @RequestBody SensorEvent event) {
-        try {
-            collectorService.sendSensorEvent(event);
-        } catch (ResponseStatusException e) {
-            log.error("Failed to collect sensor event", e);
-            throw e;
-        }
+    @Override
+    public void collectSensorEvent(SensorEventProto event, StreamObserver<Empty> responseObserver) {
+        collect(() -> collectorService.sendSensorEvent(event), responseObserver);
     }
 
-    @PostMapping(value = "/hubs", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public void collectHubEvent(@Valid @RequestBody HubEvent event) {
+    @Override
+    public void collectHubEvent(HubEventProto event, StreamObserver<Empty> responseObserver) {
+        collect(() -> collectorService.sendHubEvent(event), responseObserver);
+    }
+
+    private void collect(Runnable publish, StreamObserver<Empty> responseObserver) {
         try {
-            collectorService.sendHubEvent(event);
-        } catch (ResponseStatusException e) {
-            log.error("Failed to collect hub event", e);
-            throw e;
+            publish.run();
+
+            responseObserver.onNext(Empty.getDefaultInstance());
+            responseObserver.onCompleted();
+        } catch (Exception e) {
+            responseObserver.onError(new StatusRuntimeException(
+                    Status.INTERNAL
+                            .withDescription(e.getLocalizedMessage())
+                            .withCause(e)));
         }
+
     }
 }

@@ -12,6 +12,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import ru.yandex.practicum.collector.models.hub.HubEvent;
 import ru.yandex.practicum.collector.models.sensors.SensorEvent;
+import ru.yandex.practicum.grpc.telemetry.event.HubEventProto;
+import ru.yandex.practicum.grpc.telemetry.event.SensorEventProto;
 
 @Service
 public class CollectorService {
@@ -35,6 +37,16 @@ public class CollectorService {
 
     public void sendSensorEvent(SensorEvent event) {
         send(sensorsTopic, event.getHubId(), event.getTimestamp(), mapper.toAvro(event));
+    }
+
+    public void sendHubEvent(HubEventProto event) {
+        var avro = mapper.toAvro(event);
+        send(hubsTopic, event.getHubId(), avro.getTimestamp(), avro);
+    }
+
+    public void sendSensorEvent(SensorEventProto event) {
+        var avro = mapper.toAvro(event);
+        send(sensorsTopic, event.getHubId(), avro.getTimestamp(), avro);
     }
 
     private void send(String topic, String hubId, Instant timestamp, SpecificRecord event) {
